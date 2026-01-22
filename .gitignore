@@ -1,0 +1,27 @@
+# =================
+# Personal notes
+# =================
+LogDezvoltare.txt
+
+# =================
+# Python
+# =================
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+.env
+
+# =================
+# Android / Gradle
+# =================
+.gradle/
+build/
+local.properties
+*.iml
+
+# =================
+# OS
+# =================
+.DS_Store
+Thumbs.db
