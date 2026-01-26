@@ -90,7 +90,6 @@ class SendMoneyActivity : ComponentActivity() {
         message.put("id", 1)
         message.put("sender_id", 1)
         message.put("receiver_id", receiverId)
-        message.put("password", "1234")
         message.put("amount", amount)
 
         lifecycleScope.launch(Dispatchers.IO) {

@@ -34,6 +34,7 @@ def comm_interface(message: dict, db: DatabaseServer) -> dict | None:
                 "id": message["id"],
                 "public_key": message["public_key"],
                 "balance": 0.0,
+                "password": "1234",
                 "last_sync": int(time.time())
             }
             if not db.get_one("users", "id = ?", (new_user["id"],)):

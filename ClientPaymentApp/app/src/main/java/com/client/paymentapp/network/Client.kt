@@ -1,6 +1,7 @@
 package com.client.paymentapp.network
 
 import kotlinx.coroutines.*
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
@@ -34,9 +35,16 @@ class Client(
 
     fun send(message: String) {
         scope.launch {
-            writer?.println(message)
+            try {
+                val json = JSONObject(message)
+                json.put("password", "1234")
+                writer?.println(json.toString())
+            } catch (e: Exception) {
+                writer?.println(message)
+            }
         }
     }
+
 
     private suspend fun listenForMessages(onMessage: (String) -> Unit) {
         withContext(Dispatchers.IO) {

@@ -11,7 +11,7 @@ class LauncherActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val hasUser = UserRepository.hasUser(this)
-        val isAuthenticated = SessionManager.isAuthenticated()
+        val isAuthenticated = SessionManager.isAuthenticated(this)
 
         val intent = if (!hasUser || !isAuthenticated) {
             Intent(this, AuthActivity::class.java)
