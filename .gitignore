@@ -8,9 +8,15 @@ LogDezvoltare.txt
 # =================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 *.db
 *.sqlite
 .env
+*.log
+.venv/
+env/
+venv/
 
 # =================
 # Android / Gradle
@@ -19,9 +25,45 @@ __pycache__/
 build/
 local.properties
 *.iml
+.cxx/
+.externalNativeBuild/
+captures/
+*.apk
+*.ap_
+*.hprof
+
+# =================
+# IntelliJ / Android Studio
+# =================
+.idea/
+*.idea/
+*.ipr
+*.iws
+*.iml
+out/
 
 # =================
 # OS
 # =================
 .DS_Store
 Thumbs.db
+
+# =================
+# Keys / secrets
+# =================
+keys/
+server_private.pem
+server_public.pem
+*.keystore
+
+# =================
+# FastAPI / Uvicorn
+# =================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.sqlite
+*.db
+*.log

@@ -13,16 +13,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.client.paymentapp.network.Client
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 class SendMoneyActivity : ComponentActivity() {
-    private lateinit var client: Client
+    val client = Client()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        client = Client("192.168.0.100", 9999)
+        lifecycleScope.launch {
+            client.connect()
+        }
 
         setContent {
             MaterialTheme {
@@ -69,7 +70,8 @@ class SendMoneyActivity : ComponentActivity() {
                 val receiver = receiverId.toIntOrNull()
                 val amt = amount.toDoubleOrNull()
                 if (receiver != null && amt != null) {
-                    sendMoneyOnline(receiver, amt) { success ->
+                    lifecycleScope.launch {
+                        val success = sendMoneyOnline(receiver, amt)
                         status = if (success) "Transaction Success" else "Transaction Failed"
                     }
                 } else {
@@ -84,7 +86,7 @@ class SendMoneyActivity : ComponentActivity() {
         }
     }
 
-    private fun sendMoneyOnline(receiverId: Int, amount: Double, callback: (Boolean) -> Unit) {
+    private suspend fun sendMoneyOnline(receiverId: Int, amount: Double): Boolean {
         val message = JSONObject()
         message.put("activity", "send_money")
         message.put("id", 1)
@@ -92,13 +94,13 @@ class SendMoneyActivity : ComponentActivity() {
         message.put("receiver_id", receiverId)
         message.put("amount", amount)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                client.send(message.toString() + "\n")
-            } catch (e: Exception) {
-                e.printStackTrace()
-                callback(false)
-            }
-        }
+        val response = client.sendAndWait(message)
+
+        return response.getString("activity") == "success"
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        client.disconnect()
     }
 }

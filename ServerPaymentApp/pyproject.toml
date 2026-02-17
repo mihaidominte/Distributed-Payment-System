@@ -1,0 +1,11 @@
+[project]
+name = "serverpaymentapp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography>=46.0.5",
+    "fastapi>=0.129.0",
+    "uvicorn>=0.41.0",
+]

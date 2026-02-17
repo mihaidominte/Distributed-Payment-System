@@ -9,14 +9,16 @@ from tokens_manager import TokensManager
 from users_manager import UsersManager
 
 server_key_store = ServerKeyStore()
+server_key_store.load_or_generate()
+pending_users = {}
 
 def comm_interface(message: dict, db: DatabaseServer) -> dict | None:
-    server_public_key = server_key_store.public_key
+    server_public_key = server_key_store.public_key()
     tokens_manager = TokensManager(db)
     users_manager = UsersManager(db)
-    pending_users = {}
 
     if message["activity"] == "new_user_start_config":
+        print("New user start config")
         new_user_id = utils.generate_new_user_id()
         pending_users[new_user_id] = time.time()
         response = {
@@ -27,6 +29,7 @@ def comm_interface(message: dict, db: DatabaseServer) -> dict | None:
         return response
 
     elif message["activity"] == "new_user_final_config":
+        print("New user final config")
         try:
             if message["id"] not in pending_users:
                 return {"activity": "fail", "reason": "invalid_flow"}
@@ -34,7 +37,6 @@ def comm_interface(message: dict, db: DatabaseServer) -> dict | None:
                 "id": message["id"],
                 "public_key": message["public_key"],
                 "balance": 0.0,
-                "password": "1234",
                 "last_sync": int(time.time())
             }
             if not db.get_one("users", "id = ?", (new_user["id"],)):
@@ -54,7 +56,7 @@ def comm_interface(message: dict, db: DatabaseServer) -> dict | None:
         return {"activity": "fail"}
 
     elif message["activity"] == "send_money":
-        if users_manager.identify_user(message["id"], message["password"]):
+        if users_manager.identify_user(message["id"]):
             result = users_manager.send_money(
                 message["id"], message["amount"], message["sender_id"], message["receiver_id"])
             if result:
@@ -125,6 +127,15 @@ def handle_client(conn, addr):
         conn.close()
         db.close_database()
 
+def get_server_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+    return ip
+
 
 class Server:
     def __init__(self, host: str="", port: int=9999):
@@ -136,7 +147,8 @@ class Server:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.bind((self.HOST, self.PORT))
         self.server.listen()
-        print(f"[START] Server started on {self.HOST}:{self.PORT}")
+        server_ip = get_server_ip()
+        print(f"[START] Server started on {server_ip}:{self.PORT}")
 
         while True:
             conn, addr = self.server.accept()

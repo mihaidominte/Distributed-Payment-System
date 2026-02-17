@@ -1,24 +1,18 @@
 package com.client.paymentapp.auth
 
-import android.content.Context
-
 object SessionManager {
 
-    private const val PREFS_NAME = "session_prefs"
-    private const val KEY_AUTH = "authenticated"
+    private var authenticated = false
 
-    fun authenticate(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_AUTH, true).apply()
+    fun authenticate() {
+        authenticated = true
     }
 
-    fun logout(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().clear().apply()
+    fun logout() {
+        authenticated = false
     }
 
-    fun isAuthenticated(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_AUTH, false)
+    fun isAuthenticated(): Boolean {
+        return authenticated
     }
 }

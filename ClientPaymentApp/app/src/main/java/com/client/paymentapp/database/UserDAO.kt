@@ -26,4 +26,7 @@ interface UserDAO {
 
     @Query("UPDATE user SET serverPublicKey = :serverKey")
     suspend fun updateServerPublicKey(serverKey: String)
+
+    @Query("DELETE FROM user")
+    suspend fun deleteUser()
 }

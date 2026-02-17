@@ -24,7 +24,6 @@ class DatabaseServer:
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS users(
             id TEXT PRIMARY KEY,
-            password TEXT,
             public_key TEXT,
             balance REAL,
             last_sync INTEGER

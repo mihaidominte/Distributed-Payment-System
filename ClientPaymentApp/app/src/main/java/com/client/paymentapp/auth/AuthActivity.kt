@@ -24,7 +24,7 @@ class AuthActivity : ComponentActivity() {
             MaterialTheme {
                 AuthScreen(
                     onSuccess = {
-                        SessionManager.authenticate(this)
+                        SessionManager.authenticate()
                         startActivity(Intent(this, MainActivity::class.java))
                         finish()
                     }
@@ -74,7 +74,7 @@ class AuthActivity : ComponentActivity() {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Parolă / PIN") },
+                label = { Text("Parolă") },
                 visualTransformation = PasswordVisualTransformation(),
                 enabled = !loading
             )
@@ -84,28 +84,31 @@ class AuthActivity : ComponentActivity() {
             Button(
                 enabled = !loading && password.isNotBlank(),
                 onClick = {
-                    loading = true
-                    status = ""
 
                     lifecycleScope.launch {
+                        loading = true
+                        status = ""
                         try {
-                            if (hasUser == true) {
-                                val ok = UserRepository.login(
-                                    context = applicationContext,
-                                    password = password
-                                )
-                                if (ok) {
-                                    onSuccess()
+                            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){
+                                if (hasUser == true) {
+                                    UserRepository.login(
+                                        context = applicationContext,
+                                        password = password
+                                    )
                                 } else {
-                                    status = "Parolă incorectă"
+                                    UserRepository.createUser(
+                                        context = applicationContext,
+                                        password = password
+                                    )
+                                    true
                                 }
-                            } else {
-                                UserRepository.createUser(
-                                    context = applicationContext,
-                                    password = password
-                                )
-                                onSuccess()
                             }
+                            if (result) {
+                                onSuccess()
+                            } else {
+                                status = "Parolă incorectă"
+                            }
+
                         } catch (e: Exception) {
                             status = "Eroare: ${e.message}"
                         } finally {
@@ -116,6 +119,27 @@ class AuthActivity : ComponentActivity() {
             ) {
                 Text(if (hasUser == true) "Login" else "Creează cont")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+                onClick = {
+                    loading = true
+                    lifecycleScope.launch {
+                        try {
+                            UserRepository.deleteUser(applicationContext)
+                            SessionManager.logout()
+
+                            recreate()
+                        } finally {
+                            loading = false
+                        }
+                    }
+                }
+            ) {
+                Text("Reset cont (test)")
+            }
+
 
             Spacer(modifier = Modifier.height(12.dp))
 

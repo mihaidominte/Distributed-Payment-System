@@ -7,63 +7,68 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.Socket
 
-class Client(
-    private val address: String,
-    private val port: Int
-) {
+class Client() {
 
     private var socket: Socket? = null
     private var writer: PrintWriter? = null
     private var reader: BufferedReader? = null
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var pendingResponse: CompletableDeferred<String>? = null
 
-    fun connect(onMessage: (String) -> Unit, onError: (String) -> Unit) {
+    suspend fun connect(
+        host: String = "192.168.0.104",
+        port: Int = 9999) = withContext(Dispatchers.IO) {
+
+        if (socket?.isConnected == true) return@withContext
+
+        socket = Socket(host, port)
+        writer = PrintWriter(socket!!.getOutputStream(), true)
+        reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
+
         scope.launch {
             try {
-                socket = Socket(address, port)
-                writer = PrintWriter(socket!!.getOutputStream(), true)
-                reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
-
-                listenForMessages(onMessage)
-
-            } catch (e: Exception) {
-                onError("Connection error: ${e.message}")
-            }
-        }
-    }
-
-    fun send(message: String) {
-        scope.launch {
-            try {
-                val json = JSONObject(message)
-                json.put("password", "1234")
-                writer?.println(json.toString())
-            } catch (e: Exception) {
-                writer?.println(message)
-            }
-        }
-    }
-
-
-    private suspend fun listenForMessages(onMessage: (String) -> Unit) {
-        withContext(Dispatchers.IO) {
-            try {
-                var line: String?
-                while (true) {
-                    line = reader?.readLine() ?: break
-                    onMessage(line)
+                while (isActive) {
+                    val line = reader?.readLine() ?: break
+                    pendingResponse?.complete(line)
                 }
-            } catch (e: Exception) {
-                onMessage("Disconnected: ${e.message}")
+            } catch (_: Exception) {
             }
         }
     }
+
+    suspend fun sendAndWait(
+        json: JSONObject,
+        timeoutMillis: Long = 30_000
+    ): JSONObject = withContext(Dispatchers.IO) {
+
+        if (writer == null) {
+            throw IllegalStateException("Not connected")
+        }
+
+        val deferred = CompletableDeferred<String>()
+        pendingResponse = deferred
+        writer!!.println(json.toString())
+
+        try {
+            val response = withTimeout(timeoutMillis) {
+                deferred.await()
+            }
+            JSONObject(response)
+        } finally {
+            pendingResponse = null
+        }
+    }
+
 
     fun disconnect() {
         scope.cancel()
         writer?.close()
         reader?.close()
         socket?.close()
+
+        writer = null
+        reader = null
+        socket = null
     }
 }

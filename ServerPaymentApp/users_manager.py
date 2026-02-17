@@ -8,13 +8,10 @@ class UsersManager:
     def new_user_config(self):
         pass
 
-    def identify_user(self, user_id: str, password: str) -> bool:
+    def identify_user(self, user_id: str) -> bool:
         user = self.db.get_one("users", "id = ?", (user_id,))
         if not user:
             utils.print_error("User not found")
-            return False
-        if user["password"] != password:
-            utils.print_error("Incorrect password")
             return False
         return True
 
