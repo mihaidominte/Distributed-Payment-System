@@ -1,70 +1,87 @@
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+import base64
 import os
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import serialization
 
 KEYS_DIR = "keys"
-PRIVATE_KEY_FILE = f"{KEYS_DIR}/server_private.pem"
-PUBLIC_KEY_FILE = f"{KEYS_DIR}/server_public.pem"
+PRIVATE_KEY_CERTIFICATE_FILE = f"{KEYS_DIR}/server_private_key_certificate.pem"
+PUBLIC_KEY_CERTIFICATE_FILE = f"{KEYS_DIR}/server_public_key_certificate.pem"
+PRIVATE_KEY_SIGN_FILE = f"{KEYS_DIR}/server_private_key_sign.pem"
+PUBLIC_KEY_SIGN_FILE = f"{KEYS_DIR}/server_public_key_sign.pem"
 
 class ServerKeyStore:
-    _private_key = None
-    _public_key = None
-    _server_id = "PAYMENT_SERVER_V1"
+    _PRIVATE_KEY_FILE = None
+    _PUBLIC_KEY_FILE = None
 
-    @classmethod
-    def load_or_generate(cls):
+    def __init__(self):
+        self._private_key = None
+        self._public_key = None
+        self._load_or_generate()
+
+    def _load_or_generate(self) -> None:
         os.makedirs(KEYS_DIR, exist_ok=True)
 
-        if os.path.exists(PRIVATE_KEY_FILE):
-            cls._load_keys()
+        if os.path.exists(self._PRIVATE_KEY_FILE):
+            self._load_keys()
         else:
-            cls._generate_and_save_keys()
+            self._generate_and_save_keys()
 
-    @classmethod
-    def _generate_and_save_keys(cls):
-        cls._private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=2048
-        )
-        cls._public_key = cls._private_key.public_key()
+    def _generate_and_save_keys(self) -> None:
+        self._private_key = Ed25519PrivateKey.generate()
+        self._public_key = self._private_key.public_key()
 
-        with open(PRIVATE_KEY_FILE, "wb") as f:
-            f.write(cls._private_key.private_bytes(
+        with open(self._PRIVATE_KEY_FILE, "wb") as f:
+            f.write(self._private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.PKCS8,
                 encryption_algorithm=serialization.NoEncryption()
             ))
 
-        with open(PUBLIC_KEY_FILE, "wb") as f:
-            f.write(cls._public_key.public_bytes(
+        with open(self._PUBLIC_KEY_FILE, "wb") as f:
+            f.write(self._public_key.public_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
             ))
 
-    @classmethod
-    def _load_keys(cls):
-        with open(PRIVATE_KEY_FILE, "rb") as f:
-            cls._private_key = serialization.load_pem_private_key(
+    def _load_keys(self) -> None:
+        with open(self._PRIVATE_KEY_FILE, "rb") as f:
+            self._private_key = serialization.load_pem_private_key(
                 f.read(),
                 password=None
             )
 
-        with open(PUBLIC_KEY_FILE, "rb") as f:
-            cls._public_key = serialization.load_pem_public_key(
+        with open(self._PUBLIC_KEY_FILE, "rb") as f:
+            self._public_key = serialization.load_pem_public_key(
                 f.read()
             )
 
-    @classmethod
-    def server_id(cls):
-        return cls._server_id
+    def sign(self, message: str) -> str:
+        if self._private_key is None:
+            raise Exception("Private key not loaded")
 
-    @classmethod
-    def private_key(cls):
-        return cls._private_key
+        message = base64.b64decode(message)
+        signature = self._private_key.sign(message)
+        signature = base64.b64encode(signature).decode()
+        return signature
 
-    @classmethod
-    def public_key(cls):
-        return cls._public_key.public_bytes(
+    def verify(self, message: bytes, signature: bytes) -> bool:
+        try:
+            self._public_key.verify(signature, message)
+            return True
+        except InvalidSignature:
+            return False
+
+    def public_key(self):
+        return self._public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ).decode()
+
+class ServerKeyCertificate(ServerKeyStore):
+    _PRIVATE_KEY_FILE = PRIVATE_KEY_CERTIFICATE_FILE
+    _PUBLIC_KEY_FILE = PUBLIC_KEY_CERTIFICATE_FILE
+
+class ServerKeySigning(ServerKeyStore):
+    _PRIVATE_KEY_FILE = PRIVATE_KEY_SIGN_FILE
+    _PUBLIC_KEY_FILE = PUBLIC_KEY_SIGN_FILE

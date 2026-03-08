@@ -24,23 +24,16 @@ class DatabaseServer:
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS users(
             id TEXT PRIMARY KEY,
-            public_key TEXT,
-            balance REAL,
-            last_sync INTEGER
+            public_key TEXT UNIQUE
         );
         """)
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS tokens(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             user_id TEXT,
-            sender_id TEXT,
-            receiver_id TEXT,
-            amount REAL,
-            date INTEGER,
+            value REAL,
             hash TEXT,
             signature TEXT,
-            counter_sig TEXT,
-            previous_hash TEXT,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
         """)
